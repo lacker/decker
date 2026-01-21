@@ -84,3 +84,32 @@ all_recs = engine.get_all_recommendations("Tannuk, Memorial Ensign")
 # Returns: high_synergy, top_cards, creatures, instants, sorceries,
 #          artifacts, enchantments, lands, utility_lands, mana_artifacts
 ```
+
+## Analyzing Decks for Potential Cuts
+
+Identify cards that might be worth removing:
+
+```bash
+uv run python recommendations.py --analyze decks/tannuk
+```
+
+This shows:
+- **EDHREC coverage** - what % of your cards appear in EDHREC recommendations
+- **Low synergy cards** - cards with <5% synergy (excluding staples like Sol Ring)
+- **Off-theme cards** - cards not in EDHREC's top lists for your commander
+
+Note: "Off-theme" doesn't always mean bad - it might be hidden tech that others haven't discovered. Use judgment.
+
+```python
+from recommendations import DeckAnalyzer
+from deck import Deck
+
+analyzer = DeckAnalyzer()
+deck = Deck.load("decks/tannuk")
+
+analysis = analyzer.analyze_deck(deck)
+print(f"Coverage: {analysis['edhrec_coverage']:.0%}")
+
+for cut in analysis["low_synergy"]:
+    print(f"{cut.synergy:+.0%} {cut.name}")
+```

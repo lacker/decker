@@ -198,6 +198,126 @@ class RecommendationEngine:
         return suggestions[:limit]
 
 
+@dataclass
+class CutCandidate:
+    """A card that might be worth cutting from a deck."""
+    name: str
+    reason: str
+    synergy: Optional[float] = None
+    type_line: str = ""
+
+
+class DeckAnalyzer:
+    """Analyzes a deck to find potential cuts."""
+
+    # Cards that are staples and shouldn't be flagged for low synergy
+    STAPLES = {
+        "sol ring", "command tower", "arcane signet", "lightning greaves",
+        "swiftfoot boots", "swords to plowshares", "path to exile",
+        "beast within", "nature's claim", "chaos warp", "counterspell",
+        "cyclonic rift", "rhystic study", "smothering tithe",
+    }
+
+    def __init__(self):
+        self.engine = RecommendationEngine()
+
+    def analyze_deck(self, deck: Deck) -> dict:
+        """
+        Analyze a deck and return potential cuts and other insights.
+
+        Returns a dict with:
+        - cut_candidates: cards that might be worth removing
+        - low_synergy: cards with low synergy (excluding staples)
+        - off_theme: cards not appearing in EDHREC data for this commander
+        - edhrec_coverage: what % of deck cards appear in EDHREC recommendations
+        """
+        if not deck.commanders:
+            raise ValueError("Deck has no commander")
+
+        commander = deck.commanders[0].name
+
+        # Get all EDHREC data
+        all_recs = self.engine.get_all_recommendations(commander, deck)
+
+        # Build synergy map
+        edhrec_cards = {}
+        for category, recs in all_recs.items():
+            for rec in recs:
+                if rec.name not in edhrec_cards or rec.synergy > edhrec_cards[rec.name]:
+                    edhrec_cards[rec.name] = rec.synergy
+
+        # Analyze each card
+        low_synergy = []
+        off_theme = []
+        in_edhrec_count = 0
+
+        for card in deck.cards:
+            if card.board not in ("mainboard", "commanders"):
+                continue
+            if "Basic Land" in card.type_line:
+                continue
+            if card.name == commander:
+                continue
+
+            name_lower = card.name.lower()
+
+            if card.name in edhrec_cards:
+                in_edhrec_count += 1
+                synergy = edhrec_cards[card.name]
+
+                # Flag low synergy cards (but not staples)
+                if synergy < 0.05 and name_lower not in self.STAPLES:
+                    low_synergy.append(CutCandidate(
+                        name=card.name,
+                        reason=f"Low synergy ({synergy:+.0%})",
+                        synergy=synergy,
+                        type_line=card.type_line,
+                    ))
+            else:
+                # Card not in EDHREC recommendations
+                off_theme.append(CutCandidate(
+                    name=card.name,
+                    reason="Not in EDHREC top cards for this commander",
+                    type_line=card.type_line,
+                ))
+
+        # Sort by synergy (lowest first)
+        low_synergy.sort(key=lambda c: c.synergy or 0)
+
+        # Calculate coverage
+        non_basic_count = len([c for c in deck.cards
+                              if c.board in ("mainboard", "commanders")
+                              and "Basic Land" not in c.type_line
+                              and c.name != commander])
+        coverage = in_edhrec_count / non_basic_count if non_basic_count else 0
+
+        return {
+            "low_synergy": low_synergy,
+            "off_theme": off_theme,
+            "edhrec_coverage": coverage,
+            "commander": commander,
+        }
+
+    def suggest_cuts(self, deck: Deck, limit: int = 10) -> list[CutCandidate]:
+        """
+        Suggest cards to cut from a deck.
+
+        Prioritizes low-synergy cards over off-theme cards.
+        """
+        analysis = self.analyze_deck(deck)
+
+        # Combine and prioritize
+        candidates = []
+
+        # Low synergy cards first (sorted by synergy, lowest first)
+        candidates.extend(analysis["low_synergy"])
+
+        # Then off-theme cards
+        candidates.extend(analysis["off_theme"])
+
+        return candidates[:limit]
+
+
 def print_recommendations(recs: list[Recommendation], title: str = "Recommendations"):
     """Pretty print a list of recommendations."""
     print(f"\n{title}")
@@ -214,15 +334,39 @@ if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Usage: python recommendations.py <commander_name>")
         print("       python recommendations.py --deck <deck_dir>")
+        print("       python recommendations.py --analyze <deck_dir>")
         print()
         print("Examples:")
         print("  python recommendations.py 'Tannuk, Memorial Ensign'")
         print("  python recommendations.py --deck decks/tannuk")
+        print("  python recommendations.py --analyze decks/tannuk")
         sys.exit(1)
 
-    engine = RecommendationEngine()
+    if sys.argv[1] == "--analyze":
+        # Analyze deck for potential cuts
+        deck_dir = sys.argv[2]
+        deck = Deck.load(deck_dir)
+        print(f"Analyzing: {deck}")
+        print()
 
-    if sys.argv[1] == "--deck":
+        analyzer = DeckAnalyzer()
+        analysis = analyzer.analyze_deck(deck)
+
+        print(f"EDHREC coverage: {analysis['edhrec_coverage']:.0%} of cards appear in EDHREC recommendations")
+        print()
+
+        if analysis["low_synergy"]:
+            print("Low synergy cards (potential cuts):")
+            for c in analysis["low_synergy"][:10]:
+                print(f"  {c.synergy:+.0%} {c.name} - {c.type_line}")
+            print()
+
+        if analysis["off_theme"]:
+            print(f"Off-theme cards ({len(analysis['off_theme'])} not in EDHREC data):")
+            for c in analysis["off_theme"][:15]:
+                print(f"  {c.name} - {c.type_line}")
+
+    elif sys.argv[1] == "--deck":
         # Load deck and suggest additions
         deck_dir = sys.argv[2]
         deck = Deck.load(deck_dir)
@@ -231,11 +375,13 @@ if __name__ == "__main__":
         commander = deck.commanders[0].name if deck.commanders else "Unknown"
         print(f"Commander: {commander}")
 
+        engine = RecommendationEngine()
         suggestions = engine.suggest_additions(deck, limit=20)
         print_recommendations(suggestions, f"Suggested additions for {deck.name}")
 
     else:
         # Just get recommendations for a commander
         commander = sys.argv[1]
+        engine = RecommendationEngine()
         recs = engine.get_recommendations_for_commander(commander, limit=20)
         print_recommendations(recs, f"High synergy cards for {commander}")
