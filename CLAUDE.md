@@ -49,3 +49,38 @@ print(deck.total_cards)    # Total card count
 # Save to directory
 deck.save("decks/my_deck")
 ```
+
+## Getting Card Recommendations
+
+Get card recommendations from EDHREC for any commander:
+
+```bash
+# By commander name
+uv run python recommendations.py "Tannuk, Memorial Ensign"
+
+# For an existing deck (suggests cards not already in the deck)
+uv run python recommendations.py --deck decks/tannuk
+```
+
+Using the module in code:
+
+```python
+from recommendations import RecommendationEngine
+from deck import Deck
+
+engine = RecommendationEngine()
+
+# Get high-synergy cards for a commander
+recs = engine.get_recommendations_for_commander("Tannuk, Memorial Ensign")
+for rec in recs:
+    print(f"{rec.name}: {rec.synergy:.0%} synergy")
+
+# Get suggestions for an existing deck (excludes cards already in deck)
+deck = Deck.load("decks/tannuk")
+suggestions = engine.suggest_additions(deck, limit=20)
+
+# Get all recommendation categories
+all_recs = engine.get_all_recommendations("Tannuk, Memorial Ensign")
+# Returns: high_synergy, top_cards, creatures, instants, sorceries,
+#          artifacts, enchantments, lands, utility_lands, mana_artifacts
+```

@@ -87,10 +87,14 @@ version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "cloudscraper" },
+    { name = "pyedhrec" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "cloudscraper", specifier = ">=1.2.71" }]
+requires-dist = [
+    { name = "cloudscraper", specifier = ">=1.2.71" },
+    { name = "pyedhrec", specifier = ">=0.0.2" },
+]
 
 [[package]]
 name = "idna"
@@ -99,6 +103,18 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/6f/6d/0703ccc57f3a7233505399edb88de3cbd678da106337b9fcde432b65ed60/idna-3.11.tar.gz", hash = "sha256:795dafcc9c04ed0c1fb032c2aa73654d8e8c5023a7df64a53f39190ada629902", size = 194582 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/0e/61/66938bbb5fc52dbdf84594873d5b51fb1f7c7794e9c0f5bd885f30bc507b/idna-3.11-py3-none-any.whl", hash = "sha256:771a87f49d9defaf64091e6e6fe9c18d4833f140bd19464795bc32d966ca37ea", size = 71008 },
+]
+
+[[package]]
+name = "pyedhrec"
+version = "0.0.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "requests" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/c4/77/78aeece0f3251f2bfa72f75fa693f51c9d05c9067adcac559957d9f8b348/pyedhrec-0.0.2.tar.gz", hash = "sha256:5bc20eccbdc2182a779a03f7a904168fd406f746afc2e6814d6f489d0d5dfb1e", size = 10294 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/54/28/d416004fd044e95eb4dadd3057106b238b3e31d8dc220aca7ca70a0bfac0/pyedhrec-0.0.2-py3-none-any.whl", hash = "sha256:5284ec3b8308294adf62771f5ec79ffde4b0de2c5fd5fea2e36219612859bbc4", size = 9825 },
 ]
 
 [[package]]
