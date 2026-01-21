@@ -113,3 +113,17 @@ print(f"Coverage: {analysis['edhrec_coverage']:.0%}")
 for cut in analysis["low_synergy"]:
     print(f"{cut.synergy:+.0%} {cut.name}")
 ```
+
+## Finding Primers and Guides
+
+Find articles, deck techs, and primers for a commander:
+
+```bash
+uv run python guides.py "Tannuk, Memorial Ensign"
+uv run python guides.py --deck decks/tannuk
+```
+
+This returns links to:
+- EDHREC deck tech articles
+- EDHREC commander page (stats, recommendations)
+- Moxfield search for community primers
