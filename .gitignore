@@ -1,3 +1,4 @@
 decks/
 __pycache__/
 .claude/settings.local.json
+.price_cache.json

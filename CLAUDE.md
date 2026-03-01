@@ -114,6 +114,44 @@ for cut in analysis["low_synergy"]:
     print(f"{cut.synergy:+.0%} {cut.name}")
 ```
 
+## Getting Card Prices
+
+Check card prices from the Mana Pool API:
+
+```bash
+# Single card (shows all printings)
+uv run python prices.py "Sol Ring"
+
+# Full deck pricing (cheapest printing per card)
+uv run python prices.py --deck decks/tannuk
+```
+
+- Prices are fetched from `manapool.com` and cached locally for 24 hours
+- Deck pricing uses the cheapest available printing for each card
+- Shows per-card and total deck cost
+
+```python
+from prices import PriceChecker
+
+checker = PriceChecker()
+
+# Get all printings of a card (sorted cheapest first)
+printings = checker.get_printings("Sol Ring")
+for p in printings:
+    print(f"[{p.set_code}] ${p.price_usd:.2f}")
+
+# Get just the cheapest printing
+cheapest = checker.get_cheapest_printing("Sol Ring")
+print(f"Cheapest: ${cheapest.price_usd:.2f}")
+
+# Price an entire deck
+from deck import Deck
+deck = Deck.load("decks/tannuk")
+results = checker.price_deck(deck)
+total = sum(r.total_price_usd for r in results if r.total_price_usd)
+print(f"Deck total: ${total:.2f}")
+```
+
 ## Finding Primers and Guides
 
 Find articles, deck techs, and primers for a commander:
